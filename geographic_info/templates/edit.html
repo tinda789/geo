@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sửa bệnh viện</title>
+</head>
+<body>
+    <h1>Sửa thông tin bệnh viện</h1>
+    <form action="/edit/{{ hospital[0] }}" method="POST">
+        <input type="text" name="name" value="{{ hospital[1] }}" required>
+        <input type="text" name="address" value="{{ hospital[2] }}" required>
+        <input type="text" name="latitude" value="{{ hospital[3] }}" required>
+        <input type="text" name="longitude" value="{{ hospital[4] }}" required>
+        <button type="submit">Cập nhật</button>
+    </form>
+</body>
+</html>

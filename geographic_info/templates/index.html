@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quản lý bệnh viện</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+<body>
+    <h1>Danh sách bệnh viện</h1>
+    <form action="/add" method="POST">
+        <input type="text" name="name" placeholder="Tên bệnh viện" required>
+        <input type="text" name="address" placeholder="Địa chỉ" required>
+        <input type="text" name="latitude" placeholder="Vĩ độ" required>
+        <input type="text" name="longitude" placeholder="Kinh độ" required>
+        <button type="submit">Thêm bệnh viện</button>
+    </form>
+    
+    <ul>
+        {% for hospital in hospitals %}
+            <li>{{ hospital[1] }} - {{ hospital[2] }} 
+                <a href="/edit/{{ hospital[0] }}">Sửa</a>
+                <a href="/delete/{{ hospital[0] }}">Xóa</a>
+            </li>
+        {% endfor %}
+    </ul>
+</body>
+</html>
