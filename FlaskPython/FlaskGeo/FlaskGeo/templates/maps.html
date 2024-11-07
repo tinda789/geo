@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bản Đồ Các Ngôi Chùa</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" rel="stylesheet">
+    <style>
+        .temple-card {
+            transition: transform 0.3s;
+        }
+
+            .temple-card:hover {
+                transform: translateY(-5px);
+            }
+
+        .bg-gradient-primary {
+            background: linear-gradient(135deg, #6a11cb 0%, #2575fc 100%);
+        }
+
+        #map {
+            height: 600px;
+            border-radius: 10px;
+        }
+
+        .custom-popup {
+            text-align: center;
+        }
+
+            .custom-popup img {
+                max-width: 200px;
+                border-radius: 5px;
+                margin-bottom: 10px;
+            }
+
+        .map-container {
+            position: relative;
+        }
+
+        .map-controls {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            z-index: 1000;
+            background: white;
+            padding: 10px;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header class="bg-gradient-primary text-white py-5 mb-5">
+        <div class="container">
+            <h1 class="display-4"><i class="fas fa-dharmachakra me-3"></i>Bản Đồ Các Ngôi Chùa</h1>
+            <p class="lead">Khám phá các ngôi chùa nổi tiếng tại Việt Nam</p>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <div class="container">
+        <!-- Search and Filter -->
+        <div class="row mb-4">
+            <div class="col-md-6">
+                <div class="input-group">
+                    <input type="text" class="form-control" placeholder="Tìm kiếm chùa...">
+                    <button class="btn btn-primary"><i class="fas fa-search"></i></button>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <select class="form-select" id="region-select">
+                    <option selected>Chọn khu vực</option>
+                    <option value="north">Miền Bắc</option>
+                    <option value="central">Miền Trung</option>
+                    <option value="south">Miền Nam</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- Map Section -->
+        <div class="map-container mb-5">
+            <div id="map"></div>
+            <div class="map-controls">
+                <button class="btn btn-sm btn-primary mb-2" onclick="fitAllMarkers()">
+                    <i class="fas fa-expand-arrows-alt"></i> Xem tất cả
+                </button>
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" id="cluster-toggle" checked>
+                    <label class="form-check-label" for="cluster-toggle">
+                        Nhóm các điểm
+                    </label>
+                </div>
+            </div>
+        </div>
+
+        <!-- Temple Cards -->
+        <div class="row g-4">
+            <!-- Temple cards will be dynamically populated -->
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="bg-light mt-5 py-4">
+        <div class="container text-center">
+            <p class="mb-0">© 2024 Bản Đồ Các Ngôi Chùa. Tất cả quyền được bảo lưu.</p>
+        </div>
+    </footer>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+    <script>
+        // Dữ liệu mẫu về các ngôi chùa
+        const temples = [
+            {
+                name: "Chùa Một Cột",
+                lat: 21.0358,
+                lng: 105.8340,
+                region: "north",
+                address: "Đội Cấn, Ba Đình, Hà Nội",
+                image: "/api/placeholder/400/300"
+            },
+            {
+                name: "Chùa Thiên Mụ",
+                lat: 16.4537,
+                lng: 107.5709,
+                region: "central",
+                address: "Kim Long, Huế, Thừa Thiên Huế",
+                image: "/api/placeholder/400/300"
+            },
+            {
+                name: "Chùa Bái Đính",
+                lat: 20.2745,
+                lng: 105.8913,
+                region: "north",
+                address: "Gia Sinh, Gia Viễn, Ninh Bình",
+                image: "/api/placeholder/400/300"
+            },
+            {
+                name: "Chùa Vĩnh Nghiêm",
+                lat: 10.7989,
+                lng: 106.7033,
+                region: "south",
+                address: "Quận 3, TP. Hồ Chí Minh",
+                image: "/api/placeholder/400/300"
+            }
+        ];
+
+        // Khởi tạo bản đồ
+        const map = L.map('map').setView([16.4537, 107.5709], 6);
+
+        // Thêm layer OpenStreetMap
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19,
+            attribution: '© OpenStreetMap contributors'
+        }).addTo(map);
+
+        // Custom icon cho markers
+        const templeIcon = L.divIcon({
+            html: '<i class="fas fa-dharmachakra fa-2x" style="color: #6a11cb;"></i>',
+            className: 'temple-marker',
+            iconSize: [30, 30],
+            iconAnchor: [15, 15]
+        });
+
+        // Thêm markers cho từng ngôi chùa
+        const markers = [];
+        temples.forEach(temple => {
+            const marker = L.marker([temple.lat, temple.lng], {icon: templeIcon});
+
+            // Tạo popup với thông tin chi tiết
+            const popupContent = `
+                <div class="custom-popup">
+                    <img src="${temple.image}" alt="${temple.name}">
+                    <h5>${temple.name}</h5>
+                    <p>${temple.address}</p>
+                    <button class="btn btn-sm btn-primary" onclick="showTempleDetails('${temple.name}')">
+                        Xem chi tiết
+                    </button>
+                </div>
+            `;
+
+            marker.bindPopup(popupContent);
+            markers.push(marker);
+            marker.addTo(map);
+
+            // Tạo card tương ứng
+            createTempleCard(temple);
+        });
+
+        // Hàm tạo card cho ngôi chùa
+        function createTempleCard(temple) {
+            const cardHtml = `
+                <div class="col-md-6 col-lg-4 temple-card-container" data-region="${temple.region}">
+                    <div class="card temple-card shadow-sm">
+                        <img src="${temple.image}" class="card-img-top" alt="${temple.name}">
+                        <div class="card-body">
+                            <h5 class="card-title">${temple.name}</h5>
+                            <p class="card-text">${temple.address}</p>
+                            <div class="d-flex justify-content-between align-items-center">
+                                <button class="btn btn-outline-primary" onclick="focusTemple(${temple.lat}, ${temple.lng})">
+                                    Xem trên bản đồ
+                                </button>
+                                <span class="text-muted">
+                                    <i class="fas fa-map-marker-alt"></i>
+                                    <span id="distance-${temple.name}">Đang tính...</span>
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            document.querySelector('.row.g-4').insertAdjacentHTML('beforeend', cardHtml);
+        }
+
+        // Hàm focus vào ngôi chùa trên bản đồ
+        function focusTemple(lat, lng) {
+            map.setView([lat, lng], 15);
+            const marker = markers.find(m => m.getLatLng().lat === lat && m.getLatLng().lng === lng);
+            if (marker) marker.openPopup();
+        }
+
+        // Hàm fit tất cả markers vào view
+        function fitAllMarkers() {
+            const group = L.featureGroup(markers);
+            map.fitBounds(group.getBounds().pad(0.1));
+        }
+
+        // Xử lý filter theo khu vực
+        document.getElementById('region-select').addEventListener('change', function(e) {
+            const selectedRegion = e.target.value;
+            document.querySelectorAll('.temple-card-container').forEach(card => {
+                if (selectedRegion === 'Chọn khu vực' || card.dataset.region === selectedRegion) {
+                    card.style.display = 'block';
+                } else {
+                    card.style.display = 'none';
+                }
+            });
+
+            // Update markers on map
+            markers.forEach((marker, index) => {
+                if (selectedRegion === 'Chọn khu vực' || temples[index].region === selectedRegion) {
+                    map.addLayer(marker);
+                } else {
+                    map.removeLayer(marker);
+                }
+            });
+        });
+
+        // Tính khoảng cách đến các chùa (giả lập)
+        function calculateDistances() {
+            temples.forEach(temple => {
+                const distance = Math.floor(Math.random() * 20) + 1; // Random distance 1-20km
+                document.getElementById(`distance-${temple.name}`).textContent = `${distance}km`;
+            });
+        }
+
+        // Khởi tạo tính khoảng cách
+        calculateDistances();
+    </script>
+</body>
+</html>
